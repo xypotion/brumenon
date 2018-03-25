@@ -1,9 +1,58 @@
+--basic mechanism called by love.update() that processes events sets in the queue
+function processEventSets(dt)
+	--block input during processing if there are any events, otherwise allow input and break
+	if peek(eventSetQueue) then 
+		inputLevel = "none"
+	else
+		inputLevel = "normal"
+		return
+	end
+	
+	local es = peek(eventSetQueue)
+	local numFinished = 0
+	
+	--process them all
+	for k, e in pairs(es) do
+		--if not already finished, process this event 
+		if not e.finished then
+			-- print("processing "..e.class)
+			if e.class then
+				if e.class == "function" then
+					-- print("...calling "..e.func)
+					_G[e.func](e.arg1)
+					e.finished = true
+				else
+					-- processActuationEvent(e)
+					_G[e.class.."EventProcessing"](e)
+				end
+			end
+		end
+				
+		--tally finished events in set
+		if e.finished then
+			numFinished = numFinished + 1
+		end
+	end
+	
+	--pop event set if all finished
+	if numFinished == #es then
+		pop(eventSetQueue)
+	end
+end
+
+--add one event to the event set queue by wrapping it in a table
 function queue(event)
 	push(eventSetQueue, {event})
 end
 
+--add a set of events to the queue
 function queueSet(eventSet)
 	push(eventSetQueue, eventSet)
+end
+
+--force queue set to be processed immediately, not at next scheduled interval. should start normally again after this
+function processNow()
+	eventFrame = eventFrameLength
 end
 
 ------------------------------------------------------------------------------------------------------
@@ -29,19 +78,7 @@ end
 -- 	return e
 -- end
 
---for updating visible counters to their actual values
---counter = {actual, shown, posSound, negSound}
-function actuationEvent(c, d)
-	local e = {
-		class = "actuation",
-		counter = c,
-		delta = d --or c.actual - c.shown --i wish this worked, but it mis-calculates/actuates if the same counter is changed in multiple queued events
-	}
-	
-	print("+"..d)
-		
-	return e
-end
+
 
 -- --basically just for applying and removing sticks
 -- function statusEvent(ey, ex, s)
