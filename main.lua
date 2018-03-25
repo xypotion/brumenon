@@ -1,7 +1,18 @@
+require "eventSetQueue"
+require "queueProcessing"
+
 function love.load()
 	print("BRUMENON")
 	
 	cellD = 40
+	
+	--init event system
+	eventFrameLength = 0.05
+	eventFrame = 0
+	eventSetQueue = {}
+	--TODO make queue bi-directional by (1) processing from the lowest index, even if it's negative, and (2) letting event sets be pushed onto the front
+	
+	testCounter = {actual = 0, shown = 0, max = 999}
 	
 	field  = {}
 	for i = 1, 10 do
@@ -14,12 +25,22 @@ function love.load()
 	field[2][2] = {class = "hero"}
 end
 
-function love.update(dt)
+function love.update(dt)	
+	--process events on a set interval
+	eventFrame = eventFrame + dt
+	if eventFrame >= eventFrameLength then
+		processEventSets(dt)
+		eventFrame = eventFrame % eventFrameLength
+	end
 end
 
 function love.draw()
+	white()
+	
 	--canvas shit
 	
+	--draw test stuff
+	love.graphics.print(testCounter.shown, 10, 10)
 	
 	--draw field
 	for y, r in ipairs(field) do
@@ -31,7 +52,7 @@ function love.draw()
 					love.graphics.setColor(233, 233, 23)
 				end
 				
-				love.graphics.rectangle("fill", 10 + y * cellD, 10 + x * cellD, 36, 36)
+				love.graphics.rectangle("fill", 100 + y * cellD, 10 + x * cellD, 36, 36)
 			else
 				--no-op
 			end
@@ -39,6 +60,7 @@ function love.draw()
 	end
 	
 	--draw player
+	
 end
 
 function love.keypressed(key)
@@ -49,6 +71,10 @@ function love.keypressed(key)
 		love.event.quit()
 	end
 	--]]
+	
+	if key == "space" then
+		queue(actuationEvent(testCounter, math.random(100)))
+	end
 end
 
 ------------------------------------------------------------------------------------------------------
@@ -84,6 +110,10 @@ end
 
 function push(q, item)
 	table.insert(q, item)
+end
+
+--TODO :)
+function frontPush(q, item)
 end
 
 --an old helper function i made in 2014 :)
