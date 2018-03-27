@@ -1,5 +1,6 @@
 require "eventSetQueue"
 require "events/actuation"
+require "events/cellOp"
 
 function love.load()
 	print("BRUMENON")
@@ -15,7 +16,7 @@ function love.load()
 	testCounter = {actual = 0, shown = 0, max = 999}
 	
 	actors = {}
-	actors.hero = {class = "hero"}
+	actors.hero = {class = "hero", facing = "s"}
 	
 	--initialize field
 	field = {low = {}, middle = {}, sprites = {}, high = {}}
@@ -66,17 +67,7 @@ function love.draw()
 	love.graphics.setColor(32, 32, 32, 255)
 	for y, r in ipairs(field.low) do
 		for x, c in ipairs(r) do
-			-- if c.class then
-				-- if c.class == "clear" then
-					-- white()
-				-- elseif c.class == "hero" then
-				-- 	love.graphics.setColor(233, 233, 23)
-				-- end
-				
-				love.graphics.rectangle("fill", 100 + y * cellD, 10 + x * cellD, 40, 40)
-			-- else
-				--no-op
-			-- end
+			love.graphics.rectangle("fill", 10 + x * cellD, 100 + y * cellD, 40, 40)
 		end
 	end
 	
@@ -85,7 +76,8 @@ function love.draw()
 	for y, r in ipairs(field.middle) do
 		for x, c in ipairs(r) do
 			if c.class == "rock" then
-				love.graphics.rectangle("fill", 100 + y * cellD, 10 + x * cellD, 36, 36)
+				--TODO drawTile() -- will be used for all 3 non-sprite layers, pulling from chipset
+				love.graphics.rectangle("fill", 12 + x * cellD, 102 + y * cellD, 36, 36)
 			else
 				--no-op
 			end
@@ -93,16 +85,11 @@ function love.draw()
 	end
 	
 	--draw sprites
-	-- love.graphics.circle()	
 	love.graphics.setColor(192, 192, 32, 255)
 	for y, r in ipairs(field.sprites) do
 		for x, c in ipairs(r) do
 			if c.class == "hero" then
-				--TODO
-				--drawActor()
-				
-				love.graphics.circle("fill", 120 + y * cellD, 30 + x * cellD, 15)
-				love.graphics.rectangle("fill", 105 + y * cellD, 15 + x * cellD, 30, 15)
+				drawActor(y, x, c)
 			else
 				--no-op
 			end
@@ -110,12 +97,12 @@ function love.draw()
 	end
 	
 	--draw upper field layer
-	love.graphics.setColor(32, 192, 32, 128)
+	love.graphics.setColor(32, 96, 32, 192)
 	for y, r in ipairs(field.high) do
 		for x, c in ipairs(r) do
 			if c.class == "leaves" then
-				love.graphics.rectangle("fill", 115 + y * cellD, 10 + x * cellD, 25, 25)
-				love.graphics.rectangle("fill", 100 + y * cellD, 25 + x * cellD, 25, 25)
+				love.graphics.rectangle("fill", 10 + x * cellD, 115 + y * cellD, 25, 25)
+				love.graphics.rectangle("fill", 25 + x * cellD, 100 + y * cellD, 25, 25)
 			else
 				--no-op
 			end
@@ -130,11 +117,147 @@ function love.keypressed(key)
 		--merry quitmas
 		love.event.quit()
 	end
+	if key == "h" then
+		print(locateHero())
+	end
 	--END DEBUG ]]
 	
 	if key == "space" then
 		queue(actuationEvent(testCounter, math.random(100)))
 	end
+	
+	if key == "w" or key == "up" then
+		heroImpetus(-1, 0)
+		actors.hero.facing = "n"
+	elseif key == "s" or key == "down" then
+		heroImpetus(1, 0)
+		actors.hero.facing = "s"
+	elseif key == "a" or key == "left" then
+		heroImpetus(0, -1)
+		actors.hero.facing = "w"
+	elseif key == "d" or key == "right" then
+		heroImpetus(0, 1)
+		actors.hero.facing = "e"
+	end
+end
+
+------------------------------------------------------------------------------------------------------
+
+function drawActor(y, x, actor)
+	love.graphics.circle("fill", 30 + x * cellD, 120 + y * cellD, 15)
+	
+	if actor.facing == "s" then
+		love.graphics.rectangle("fill", 15 + x * cellD, 105 + y * cellD, 30, 15)
+	elseif actor.facing == "n" then
+		love.graphics.rectangle("fill", 15 + x * cellD, 120 + y * cellD, 30, 15)
+	elseif actor.facing == "e" then
+		love.graphics.rectangle("fill", 15 + x * cellD, 105 + y * cellD, 15, 30)
+	elseif actor.facing == "w" then
+		love.graphics.rectangle("fill", 30 + x * cellD, 105 + y * cellD, 15, 30)
+	end
+end
+
+function heroImpetus(dy, dx)
+	local y, x = locateHero()
+	
+	--see what lies ahead
+	local destClass = nil
+	if spriteAt(y + dy, x + dx) then
+		destClass = cellAt(y + dy, x + dx, "middle").class
+		-- destClass = spriteAt(y + dy, x + dx).class --TODO also this
+	else
+		--seems like you're trying to move off the grid, so...
+		return
+	end
+	
+	-- print(destClass)
+	
+	--move
+	if destClass == "clear" then
+	-- 	if heroStuck() then
+	-- 		heroStuckMove(y, x, dy, dx)
+	-- 	else
+	-- 		reduceHeroAP()
+			heroMove(y, x, dy, dx)
+		-- end
+	end
+end
+
+--TODO actorMove()?
+function heroMove(y, x, dy, dx)
+	local ty, tx = y + dy, x + dx
+	
+	-- local moveFrames = {
+	-- 	-- {pose = "idle", yOffset = dy * -15, xOffset = dx * -15},
+	-- 	{pose = "idle", yOffset = dy * -12, xOffset = dx * -12},
+	-- 	{pose = "idle", yOffset = dy * -9, xOffset = dx * -9},
+	-- 	{pose = "idle", yOffset = dy * -6, xOffset = dx * -6},
+	-- 	{pose = "idle", yOffset = dy * -3, xOffset = dx * -3},
+	-- 	{pose = "idle", yOffset = 0, xOffset = 0},
+	-- }
+
+	-- local moveFrames = {
+	-- 	{pose = "idle", yOffset = dy * -15, xOffset = dx * -15},
+	-- 	{pose = "idle", yOffset = dy * -10, xOffset = dx * -10},
+	-- 	{pose = "idle", yOffset = dy * -5, xOffset = dx * -5},
+	-- 	{pose = "idle", yOffset = 0, xOffset = 0},
+	-- }
+
+	--queue pose and cell ops
+	queueSet({
+		cellOpEvent(ty, tx, actors.hero),
+		cellOpEvent(y, x, clear()),
+		-- poseEvent(ty, tx, moveFrames)
+	})
+	
+	processNow()
+end
+
+--TODO neat, but won't be used for a long time (AoE effects in battle!). definitely get something simpler for e.g. locateHero()
+--search whole grid for cells at least min away and up to max away, optionally matching class
+--this can still be optimized, methinks TODO something mathy, not just looping over whole grid. low priority, though
+function cellsInDistanceRange(ly, lx, min, max, class) --l as in 'locus'
+	local cells = {}
+	
+	for y, r in ipairs(field.sprites) do
+		for x, c in ipairs(r) do
+			if math.abs(y - ly) + math.abs(x - lx) >= min and math.abs(y - ly) + math.abs(x - lx) <= max then
+				--y-x is within specified distance range of ly-lx
+				if class then
+					-- if c.contents.class and c.contents.class == class then
+					if c.class and c.class == class then
+						--we do care about class & it matches, so push
+						push(cells, {y = y, x = x})
+					end
+				else
+					--we don't care about class, just push
+					push(cells, {y = y, x = x})
+				end
+			end
+		end
+	end
+	
+	return cells
+end
+
+--cells 0 to 2 cells from 2,2 = the whole grid
+--TODO this is a dumb thing to use for locateHero(). just check the whole grid. dummy.
+function getAllCells(class)
+	return cellsInDistanceRange(0, 0, 0, 20, class)
+end
+
+function locateHero()
+	local h = getAllCells("hero")[1]
+	if h then 
+		return h.y, h.x
+	else 
+		print("hero not found!?")
+		return nil, nil
+	end
+end
+
+function clear()
+	return {class = "clear"}
 end
 
 ------------------------------------------------------------------------------------------------------
@@ -143,14 +266,19 @@ function white()
 	love.graphics.setColor(255, 255, 255, 255)
 end
 
---copied directly from HDBS, but you will probably need something like this eventually!
--- function cellAt(y, x)
--- 	if stage.field[y] then
--- 		return stage.field[y][x]
--- 	else
--- 		return nil
--- 	end
--- end
+-- copied directly from HDBS!
+function cellAt(y, x, layer)
+	if field[layer][y] then
+		return field[layer][y][x]
+	else
+		return nil
+	end
+end
+
+--maybe not actually necessary? not sure. TODO
+function spriteAt(y, x)
+	return cellAt(y, x, "sprites")
+end
 
 function peek(q)
 	return q[1]

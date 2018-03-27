@@ -3,6 +3,7 @@ function processEventSets(dt)
 	--block input during processing if there are any events, otherwise allow input and break
 	if peek(eventSetQueue) then 
 		inputLevel = "none"
+		-- print("none!")
 	else
 		inputLevel = "normal"
 		return
@@ -22,7 +23,7 @@ function processEventSets(dt)
 					_G[e.func](e.arg1)
 					e.finished = true
 				else
-					-- processActuationEvent(e)
+					-- print(e.class.."EventProcessing")
 					_G[e.class.."EventProcessing"](e)
 				end
 			end
