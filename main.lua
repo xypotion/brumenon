@@ -1,5 +1,4 @@
 require "eventSetQueue"
-require "queueProcessing"
 require "events/actuation"
 
 function love.load()
@@ -15,15 +14,35 @@ function love.load()
 	
 	testCounter = {actual = 0, shown = 0, max = 999}
 	
-	field  = {}
+	actors = {}
+	actors.hero = {class = "hero"}
+	
+	--initialize field
+	field = {low = {}, middle = {}, sprites = {}, high = {}}
+	field.low = {}
 	for i = 1, 10 do
-		field[i] = {}
+		field.low[i] = {}
+		field.middle[i] = {}
+		field.sprites[i] = {}
+		field.high[i] = {}
 		for j = 1, 10 do
-			field[i][j] = {class = "clear"}
+			field.low[i][j] = {class = "clear", collide = false}
+			field.middle[i][j] = {class = "clear", collide = false}
+			field.sprites[i][j] = {class = "clear"}
+			field.high[i][j] = {class = "clear"}
 		end
 	end
 	
-	field[2][2] = {class = "hero"}
+	field.sprites[2][2] = actors.hero
+	
+	field.middle[8][9] = {class = "rock", collide = true}
+	field.middle[9][8] = {class = "rock", collide = true}
+	field.middle[9][9] = {class = "rock", collide = true}
+	
+	field.high[2][8] = {class = "leaves"}
+	field.high[3][9] = {class = "leaves"}
+	field.high[8][2] = {class = "leaves"}
+	field.high[9][3] = {class = "leaves"}
 end
 
 function love.update(dt)	
@@ -38,21 +57,34 @@ end
 function love.draw()
 	white()
 	
-	--canvas shit
+	--canvas shit TODO
 	
 	--draw test stuff
 	love.graphics.print(testCounter.shown, 10, 10)
 	
-	--draw field
-	for y, r in ipairs(field) do
+	--draw lower field layer
+	love.graphics.setColor(32, 32, 32, 255)
+	for y, r in ipairs(field.low) do
 		for x, c in ipairs(r) do
-			if c.class then
-				if c.class == "clear" then
-					white()
-				elseif c.class == "hero" then
-					love.graphics.setColor(233, 233, 23)
-				end
+			-- if c.class then
+				-- if c.class == "clear" then
+					-- white()
+				-- elseif c.class == "hero" then
+				-- 	love.graphics.setColor(233, 233, 23)
+				-- end
 				
+				love.graphics.rectangle("fill", 100 + y * cellD, 10 + x * cellD, 40, 40)
+			-- else
+				--no-op
+			-- end
+		end
+	end
+	
+	--draw middle layer
+	love.graphics.setColor(96, 48, 48, 255)
+	for y, r in ipairs(field.middle) do
+		for x, c in ipairs(r) do
+			if c.class == "rock" then
 				love.graphics.rectangle("fill", 100 + y * cellD, 10 + x * cellD, 36, 36)
 			else
 				--no-op
@@ -60,18 +92,45 @@ function love.draw()
 		end
 	end
 	
-	--draw player
+	--draw sprites
+	-- love.graphics.circle()	
+	love.graphics.setColor(192, 192, 32, 255)
+	for y, r in ipairs(field.sprites) do
+		for x, c in ipairs(r) do
+			if c.class == "hero" then
+				--TODO
+				--drawActor()
+				
+				love.graphics.circle("fill", 120 + y * cellD, 30 + x * cellD, 15)
+				love.graphics.rectangle("fill", 105 + y * cellD, 15 + x * cellD, 30, 15)
+			else
+				--no-op
+			end
+		end
+	end
+	
+	--draw upper field layer
+	love.graphics.setColor(32, 192, 32, 128)
+	for y, r in ipairs(field.high) do
+		for x, c in ipairs(r) do
+			if c.class == "leaves" then
+				love.graphics.rectangle("fill", 115 + y * cellD, 10 + x * cellD, 25, 25)
+				love.graphics.rectangle("fill", 100 + y * cellD, 25 + x * cellD, 25, 25)
+			else
+				--no-op
+			end
+		end
+	end
 	
 end
 
 function love.keypressed(key)
-	--DEBUG
-	--[ [
+	-- [[ DEBUG
 	if key == "escape" then
 		--merry quitmas
 		love.event.quit()
 	end
-	--]]
+	--END DEBUG ]]
 	
 	if key == "space" then
 		queue(actuationEvent(testCounter, math.random(100)))
