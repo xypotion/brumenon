@@ -3,6 +3,7 @@ require "eventSetQueue"
 require "events/actuation"
 require "events/cellOp"
 require "events/pose"
+require "events/screenSlide"
 
 function love.load()
 	print("BRUMENON")
@@ -19,24 +20,27 @@ function love.load()
 	
 	actors = {}
 	actors.hero = {class = "hero", facing = "s", xOffset = 0, yOffset = 0}
+	actors.muffin = {class = "muffin", facing = "n", xOffset = 0, yOffset = 0}
+	--TODO better constructors
 	
 	--initialize field
-	field = {low = {}, middle = {}, sprites = {}, high = {}}
+	field = {low = {}, middle = {}, sprite = {}, high = {}}
 	field.low = {}
 	for i = 1, 10 do
 		field.low[i] = {}
 		field.middle[i] = {}
-		field.sprites[i] = {}
+		field.sprite[i] = {}
 		field.high[i] = {}
 		for j = 1, 10 do
 			field.low[i][j] = {class = "clear", collide = false}
 			field.middle[i][j] = {class = "clear", collide = false}
-			field.sprites[i][j] = {class = "clear"}
+			field.sprite[i][j] = {class = "clear"}
 			field.high[i][j] = {class = "clear"}
 		end
 	end
 	
-	field.sprites[2][2] = actors.hero
+	field.sprite[2][2] = actors.hero
+	field.sprite[9][2] = actors.muffin
 	
 	field.middle[8][9] = {class = "rock", collide = true}
 	field.middle[9][8] = {class = "rock", collide = true}
@@ -44,8 +48,8 @@ function love.load()
 	
 	field.high[2][8] = {class = "leaves"}
 	field.high[3][9] = {class = "leaves"}
-	field.high[8][2] = {class = "leaves"}
-	field.high[9][3] = {class = "leaves"}
+	field.high[2][9] = {class = "leaves"}
+	field.high[3][8] = {class = "leaves"}
 end
 
 function love.update(dt)	
@@ -57,16 +61,16 @@ function love.update(dt)
 	end
 	
 	if inputLevel == "normal" then
-		if love.keyboard.isDown("w") then
+		if love.keyboard.isDown("w", "up") then
 			heroImpetus(-1, 0)
 			actors.hero.facing = "n"
-		elseif love.keyboard.isDown("s") then
+		elseif love.keyboard.isDown("s", "down") then
 			heroImpetus(1, 0)
 			actors.hero.facing = "s"
-		elseif love.keyboard.isDown("a") then
+		elseif love.keyboard.isDown("a", "left") then
 			heroImpetus(0, -1)
 			actors.hero.facing = "w"
-		elseif love.keyboard.isDown("d") then
+		elseif love.keyboard.isDown("d", "right") then
 			heroImpetus(0, 1)
 			actors.hero.facing = "e"
 		end
@@ -103,13 +107,10 @@ function love.draw()
 	end
 	
 	--draw sprites
-	love.graphics.setColor(192, 192, 32, 255)
-	for y, r in ipairs(field.sprites) do
+	for y, r in ipairs(field.sprite) do
 		for x, c in ipairs(r) do
-			if c.class == "hero" then
+			if c.class ~= "clear" then
 				drawActor(y, x, c)
-			else
-				--no-op
 			end
 		end
 	end
@@ -127,6 +128,8 @@ function love.draw()
 		end
 	end
 	
+	white()
+	love.graphics.rectangle("line", 50, 140, 400, 400)
 end
 
 function love.keypressed(key)
@@ -138,15 +141,53 @@ function love.keypressed(key)
 	if key == "h" then
 		print(locateHero())
 	end
-	if key == "space" then
+	if key == "return" then
 		queue(actuationEvent(testCounter, math.random(100)))
 	end
 	--END DEBUG ]]
+	
+	if inputLevel == "normal" and key == "space" then
+		heroFacingInteract()
+	end
+end
+
+function heroFacingInteract()
+	tablePrint(heroFacingTile())
 end
 
 ------------------------------------------------------------------------------------------------------
 
+function heroFacingTile(a, layer) --for actor
+	if not layer then layer = "sprite" end
+	
+	local dy, dx = 0, 0
+	local hy, hx = locateHero() --not always hero? not sure... TODO
+	
+	if actors.hero.facing == "n" then
+		dy = -1
+	elseif actors.hero.facing == "s" then
+		dy = 1
+	elseif actors.hero.facing == "w" then
+		dx = -1
+	elseif actors.hero.facing == "e" then
+		dx = 1
+	end
+	
+	if field["sprite"][hy + dy] and field["sprite"][hy + dy][hx + dx] then
+		return field["sprite"][hy + dy][hx + dx]
+	else
+		return {class = "OOB"}
+	end
+end
+
 function drawActor(y, x, actor)
+	if actor.class == "hero" then
+		love.graphics.setColor(192, 192, 32, 255)
+	else
+		love.graphics.setColor(32, 192, 192, 255)
+	end
+	
+	--DEBUG, so don't bother making this prettier. will all be replaced with spritesheet + animated frame stuff (TODO)
 	love.graphics.circle("fill", 30 + x * cellD + actor.xOffset, 120 + y * cellD + actor.yOffset, 15)
 	
 	if actor.facing == "s" then
@@ -163,20 +204,24 @@ end
 function heroImpetus(dy, dx)
 	local y, x = locateHero()
 	
-	--see what lies ahead
-	local destClass = nil
-	if spriteAt(y + dy, x + dx) then
-		destClass = cellAt(y + dy, x + dx, "middle").class
-		-- destClass = spriteAt(y + dy, x + dx).class --TODO also this, but not that simple
-	else
-		--seems like you're trying to move off the grid, so...
+	--TODO come back to this (obviously)
+	if y + dy == 0 then
+		print("top edge")
+		queue(screenSlideEvent("north"))
+		processNow()
+		return
+	elseif y + dy == 11 or x + dx == 0 or x + dx == 11 then
+		print("edge of some kind")
 		return
 	end
 	
-	-- print(destClass)
-	
-	--move
-	if destClass == "clear" then
+	--move allowed?
+	local canMove = true
+	canMove = canMove and cellAt(y + dy, x + dx, "middle").class == "clear"
+	canMove = canMove and cellAt(y + dy, x + dx, "sprite").class == "clear"
+		
+	--move if allowed
+	if canMove then
 		heroMove(y, x, dy, dx)
 	end
 end
@@ -212,12 +257,13 @@ end
 function locateHero()	
 	for y = 1, 10 do
 		for x = 1, 10 do
-			if field.sprites[y][x].class == "hero" then
+			if field.sprite[y][x].class == "hero" then
 				return y, x
 			end
 		end
 	end
 	
+	--fallback only
 	return nil, nil
 end
 
@@ -242,7 +288,7 @@ end
 
 --maybe not actually necessary? not sure. TODO
 function spriteAt(y, x)
-	return cellAt(y, x, "sprites")
+	return cellAt(y, x, "sprite")
 end
 
 function peek(q)

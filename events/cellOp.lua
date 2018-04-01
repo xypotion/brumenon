@@ -1,5 +1,5 @@
 function cellOpEvent(y, x, payload, layer)
-	if layer == nil then layer = "sprites" end
+	if layer == nil then layer = "sprite" end
 	
 	local e = {
 		class = "cellOp",

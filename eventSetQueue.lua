@@ -26,6 +26,8 @@ function processEventSets(dt)
 					-- print(e.class.."EventProcessing")
 					_G[e.class.."EventProcessing"](e)
 				end
+			else
+				print("you made another event without a class, dummy")
 			end
 		end
 				
