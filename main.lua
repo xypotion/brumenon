@@ -16,7 +16,9 @@ function love.load()
 	eventSetQueue = {}
 	--TODO make queue bi-directional by (1) processing from the lowest index, even if it's negative, and (2) letting event sets be pushed onto the front
 	
-	testCounter = {actual = 0, shown = 0, max = 999}
+	counters = {
+		testCounter = {actual = 0, shown = 0, max = 999}
+	}
 	
 	actors = {}
 	actors.hero = {class = "hero", facing = "s", xOffset = 0, yOffset = 0}
@@ -24,18 +26,19 @@ function love.load()
 	--TODO better constructors
 	
 	--TODO will probably need different attributes for facing + stepping interactions, then just constantly check the latter
-	actors.muffin.interactionScript = {
-		{class = "selfPose", args = {actor = "muffin", poseFrames = {
-			{facing = "e", xOffset = 0, yOffset = 0},
-			{facing = "s", xOffset = 0, yOffset = 0},
-			{facing = "w", xOffset = 0, yOffset = 0},
-			{facing = "n", xOffset = 0, yOffset = 0},
-			{facing = "e", xOffset = 0, yOffset = 0},
-			{facing = "s", xOffset = 0, yOffset = 0},
-			{facing = "w", xOffset = 0, yOffset = 0},
-			{facing = "n", xOffset = 0, yOffset = 0},
-		}}}
-	}
+	-- actors.muffin.interactionScript = {
+	-- 	{class = "selfPose", args = {actor = "muffin", poseFrames = {
+	-- 		{facing = "e", xOffset = 0, yOffset = 0},
+	-- 		{facing = "s", xOffset = 0, yOffset = 0},
+	-- 		{facing = "w", xOffset = 0, yOffset = 0},
+	-- 		{facing = "n", xOffset = 0, yOffset = 0},
+	-- 		{facing = "e", xOffset = 0, yOffset = 0},
+	-- 		{facing = "s", xOffset = 0, yOffset = 0},
+	-- 		{facing = "w", xOffset = 0, yOffset = 0},
+	-- 		{facing = "n", xOffset = 0, yOffset = 0},
+	-- 	}}}
+	-- }
+	actors.muffin.interactionScript = "debugActuation3"
 	
 	--initialize field
 	field = {low = {}, middle = {}, sprite = {}, high = {}}
@@ -97,7 +100,7 @@ function love.draw()
 	--canvas shit TODO
 	
 	--draw test stuff
-	love.graphics.print(testCounter.shown, 10, 10)
+	love.graphics.print(counters.testCounter.shown, 10, 10)
 	
 	--draw lower field layer
 	love.graphics.setColor(32, 32, 32, 255)
@@ -156,10 +159,13 @@ function love.keypressed(key)
 		print(locateHero())
 	end
 	if key == "return" then
-		queue(actuationEvent(testCounter, math.random(100)))
+		-- queue(actuationEvent(testCounter, math.random(100)))
+		queueSetFromScript("debugActuation2")
+		-- queueSetFromScript("debug Actuation 2")
 	end
 	--END DEBUG ]]
 	
+	--TODO this shouldn't be doable while hero is moving, but it is. figure out why soon!
 	if inputLevel == "normal" and key == "space" then
 		heroFacingInteract()
 	end
@@ -345,4 +351,15 @@ function tablePrint(table, offset)
 			print(offset.."["..k.."] = "..tostring(v))
 		end
 	end	
+end
+
+function split(raw, separator)
+	if not separator then separator = "%S+" end
+	local set = {}
+	
+	for i in string.gmatch(raw, separator) do
+		-- print(i)
+		table.insert(set, i)
+	end
+	return set
 end

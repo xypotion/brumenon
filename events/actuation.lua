@@ -12,6 +12,18 @@ function actuationEvent(c, d)
 	return e
 end
 
+--TODO construct with above, then mutate args? maybe this can even be done generically for all event types in EventSetQueue?? although defaults wouldn't work
+function actuationEventGeneric(args)
+	local e = {
+		class = "actuation",
+		
+		counter = counters[args[1]],
+		delta = tonumber(args[2])
+	}
+
+	return e
+end
+
 ------------------------------------------------------------------------------------------------------
 
 function actuationEventProcessing(e)

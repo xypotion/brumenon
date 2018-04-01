@@ -59,14 +59,58 @@ function processNow()
 end
 
 --for when all that's provided is a table with the event type + its args (or a table of such tables)
-function queueSetFromScript(es)
-	for k, e in ipairs(es) do
-		print("queueing ", e.class)
-		es[k] = _G[e.class.."Event"](e.args)
+-- function queueSetFromScript(es)
+-- 	for k, e in ipairs(es) do
+-- 		print("queueing ", e.class)
+-- 		es[k] = _G[e.class.."Event"](e.args)
+-- 	end
+--
+-- 	queueSet(es)
+-- end
+
+--love.filesystem.lines() is OK for now, but i think it should be replaced with a file-loader + array-walker later to improve performance. TODO
+function queueSetFromScript(name)
+	local raw = {}
+	local building = false
+	
+	--collect raw lines first
+	for line in love.filesystem.lines("scripts/debug.txt") do
+		--add to raw, or stop if end found
+		if building then		
+			if line == "end" then
+				-- print("end")
+				building = false
+				break
+			end
+			-- print("   adding", line)
+			table.insert(raw, line)
+		end
+		
+		--found it
+		if line == name then
+			print("building:", line)
+			building = true
+		end
+		
+		-- print(line)
 	end
 	
+	--construct events and queue them
+	local es = {}
+	for k, line in ipairs(raw) do
+		local bits = split(line)
+		local class = pop(bits)
+		table.insert(es, _G[class.."EventGeneric"](bits))
+	end
 	queueSet(es)
 end
+
+--[[
+important stuff TODO for this system
+- ability to queue sets of events (not just individual ones) via scripts. i'm pretty sure this will be necessary. just wrap in {...}?
+- shortcut events for scripts, e.g. "spin" = 4 "pose" events; put spinEvent in pose.lua
+- better generic event creation. maybe use colons to specify args, otherwise they take default values? call regular constructors, then mutate event? hm
+]]
 
 ------------------------------------------------------------------------------------------------------
 

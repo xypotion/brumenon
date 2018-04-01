@@ -1,0 +1,23 @@
+debugMuffinSpin
+!selfPose 
+	actor:muffin 
+		poseFrames:...
+		
+
+
+debugActuation1
+actuation testCounter 10
+end
+
+debugActuation2
+actuation testCounter 10
+actuation testCounter 20
+end
+
+
+
+debugActuation3
+actuation testCounter 10
+actuation testCounter 20
+actuation testCounter 50
+end
