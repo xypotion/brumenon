@@ -45,7 +45,7 @@ end
 
 --add one event to the event set queue by wrapping it in a table
 function queue(event)
-	push(eventSetQueue, {event})
+	queueSet({event})
 end
 
 --add a set of events to the queue
@@ -56,6 +56,16 @@ end
 --force queue set to be processed immediately, not at next scheduled interval. should start normally again after this
 function processNow()
 	eventFrame = eventFrameLength
+end
+
+--for when all that's provided is a table with the event type + its args (or a table of such tables)
+function queueSetFromScript(es)
+	for k, e in ipairs(es) do
+		print("queueing ", e.class)
+		es[k] = _G[e.class.."Event"](e.args)
+	end
+	
+	queueSet(es)
 end
 
 ------------------------------------------------------------------------------------------------------

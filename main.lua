@@ -23,6 +23,20 @@ function love.load()
 	actors.muffin = {class = "muffin", facing = "n", xOffset = 0, yOffset = 0}
 	--TODO better constructors
 	
+	--TODO will probably need different attributes for facing + stepping interactions, then just constantly check the latter
+	actors.muffin.interactionScript = {
+		{class = "selfPose", args = {actor = "muffin", poseFrames = {
+			{facing = "e", xOffset = 0, yOffset = 0},
+			{facing = "s", xOffset = 0, yOffset = 0},
+			{facing = "w", xOffset = 0, yOffset = 0},
+			{facing = "n", xOffset = 0, yOffset = 0},
+			{facing = "e", xOffset = 0, yOffset = 0},
+			{facing = "s", xOffset = 0, yOffset = 0},
+			{facing = "w", xOffset = 0, yOffset = 0},
+			{facing = "n", xOffset = 0, yOffset = 0},
+		}}}
+	}
+	
 	--initialize field
 	field = {low = {}, middle = {}, sprite = {}, high = {}}
 	field.low = {}
@@ -152,7 +166,11 @@ function love.keypressed(key)
 end
 
 function heroFacingInteract()
-	tablePrint(heroFacingTile())
+	-- tablePrint(heroFacingTile())
+	local is = heroFacingTile().interactionScript
+	if is then
+		queueSetFromScript(is)
+	end
 end
 
 ------------------------------------------------------------------------------------------------------
